@@ -26,22 +26,47 @@ async function run() {
     await client.connect();
 
     const jobsCollection = client.db("career-code").collection("jobs");
-    const applicationCollection = client
+    const applicationsCollection = client
       .db("career-code")
       .collection("applications");
 
-    // jobs api
+    // ----------jobs api------
+    // find all jobs
     app.get("/jobs", async (req, res) => {
-      const cursor = jobsCollection.find();
+      // ----find posted jobs based on email---
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.hr_email = email;
+      }
+
+      const cursor = jobsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    // --could be done but should not be done--
+    // -----fond posted jobs based on email-----
+    // app.get("/jobsByEmailAddress", async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = { hr_email: email };
+    //   const result = await jobsCollection.find(query).toArray()
+    //   res.send(result)
+    // });
 
     //  dynamically get one data
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await jobsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // job add
+    app.post("/jobs", async (req, res) => {
+      const newJob = req.body;
+      console.log(newJob);
+      const result = await jobsCollection.insertOne(newJob);
       res.send(result);
     });
 
@@ -53,7 +78,7 @@ async function run() {
       const query = {
         applicant: email,
       };
-      const result = await applicationCollection.find(query).toArray();
+      const result = await applicationsCollection.find(query).toArray();
 
       // bad way to aggregate data
       for (const application of result) {
@@ -68,10 +93,33 @@ async function run() {
       res.send(result);
     });
 
+    // get specific data for view applications
+    app.get("/applications/job/:job_id", async (req, res) => {
+      const job_id = req.params.job_id;
+      console.log(job_id);
+      const query = { jobId: job_id };
+      const result = await applicationsCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // send a application
     app.post("/applications", async (req, res) => {
       const application = req.body;
       console.log(application);
-      const result = await applicationCollection.insertOne(application);
+      const result = await applicationsCollection.insertOne(application);
+      res.send(result);
+    });
+
+    // ------status update-------
+    app.patch("/applications/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status: req.body.status,
+        },
+      };
+      const result = await applicationsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     });
 
