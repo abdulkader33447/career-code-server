@@ -30,6 +30,23 @@ async function run() {
       .db("career-code")
       .collection("applications");
 
+    // ----
+    app.get("/jobs/applications", async (req, res) => {
+      const email = req.query.email;
+      const query = { hr_email: email };
+      const jobs = await jobsCollection.find(query).toArray();
+
+      // should use aggregate to have optimum data fetching
+      for (const job of jobs) {
+        const applicationQuery = { jobId: job._id.toString() };
+        const application_count = await applicationsCollection.countDocuments(
+          applicationQuery
+        );
+        job.application_count = application_count;
+      }
+      res.send(jobs);
+    });
+
     // ----------jobs api------
     // find all jobs
     app.get("/jobs", async (req, res) => {
