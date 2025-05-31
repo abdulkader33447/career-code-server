@@ -2,12 +2,41 @@ const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 const app = express();
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const port = process.env.PORT || 3000;
 require("dotenv").config();
 
-// middleware
-app.use(cors());
+// ----------middleware
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
+
+const logger = (req, res, next) => {
+  console.log("inside the logger middleware");
+  next();
+};
+
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
+// ---------------middleware
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.im0knfe.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -31,7 +60,7 @@ async function run() {
       .collection("applications");
 
     // ----
-    app.get("/jobs/applications", async (req, res) => {
+    app.get("/jobs/applications",verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { hr_email: email };
       const jobs = await jobsCollection.find(query).toArray();
@@ -45,6 +74,21 @@ async function run() {
         job.application_count = application_count;
       }
       res.send(jobs);
+    });
+
+    // JWT token related api
+    app.post("/jwt", async (req, res) => {
+      const userInfo = req.body;
+
+      const token = jwt.sign(userInfo, process.env.JWT_ACCESS_SECRET, {
+        expiresIn: "2h",
+      });
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+      });
+
+      res.send({ success: true });
     });
 
     // ----------jobs api------
@@ -89,8 +133,10 @@ async function run() {
 
     // job application related apis
 
-    app.get("/applications", async (req, res) => {
+    app.get("/applications", logger, async (req, res) => {
       const email = req.query.email;
+
+      // console.log("inside applications api", req.cookies);
 
       const query = {
         applicant: email,
