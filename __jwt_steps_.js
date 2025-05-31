@@ -46,4 +46,17 @@
       10. jwt.verify function . if err return 401 --> unauthorized
       11. if token is valid set the decoded value to the req object
       12. if data asking for doesn't match with the owner or bearer of the token --> 403 --> forbidden access
+
+
+
+      3 approach to jwt
+
+      1. generate jwt > send to the client > store it in the local storage > sent the token to the server using header > on the server verify token
+
+      2. generate token > set token to the cookies > ensure client and server exchange cookies > on the server verify token
+
+
+
+      firebase authentication approach 
+      1. already have the token in firebase (client side) > we will send the token to the server using auth header  > verify the token
  */
